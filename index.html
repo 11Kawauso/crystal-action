@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>結晶のアクション（試作版）</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0d0918; overflow: hidden; color: #e9dcff;
+                   font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif; }
+      #game { position: absolute; inset: 0 0 28px 0; display: flex; align-items: center; justify-content: center; }
+      #unity-canvas { display: block; background: #1b1428; outline: none; }
+      #loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+                 justify-content: center; gap: 10px; font-size: 14px; letter-spacing: .1em; }
+      #bar { width: 260px; height: 8px; border: 1px solid #b44cff; }
+      #fill { height: 100%; width: 0; background: linear-gradient(90deg, #6a1fb0, #f0c8ff); }
+      #footer { position: absolute; left: 0; right: 0; bottom: 0; height: 28px; display: flex; align-items: center;
+                justify-content: space-between; padding: 0 12px; box-sizing: border-box; font-size: 12px; opacity: .75; }
+      #footer button { background: #2e2440; color: #e9dcff; border: 1px solid #6a1fb0; border-radius: 4px;
+                       font: inherit; padding: 2px 10px; cursor: pointer; }
+      #footer button:hover { background: #4a3d63; }
+      #msg { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div id="game"><canvas id="unity-canvas" tabindex="-1"></canvas></div>
+    <div id="loading"><div>読み込み中…</div><div id="bar"><div id="fill"></div></div></div>
+    <div id="msg"></div>
+    <div id="footer">
+      <span>結晶のアクション（試作版）　—　ゲーム画面をクリックしてから操作してください</span>
+      <button id="fs" type="button" tabindex="-1">全画面</button>
+    </div>
+    <script>
+      const canvas = document.getElementById("unity-canvas");
+      const game = document.getElementById("game");
+
+      // Keep the game 16:9 and as large as the window allows.
+      function fit() {
+        const w = game.clientWidth, h = game.clientHeight;
+        const s = Math.min(w / 16, h / 9);
+        canvas.style.width = Math.floor(s * 16) + "px";
+        canvas.style.height = Math.floor(s * 9) + "px";
+      }
+      window.addEventListener("resize", fit);
+      fit();
+
+      // Right-click is used for aiming: never open the browser menu on the game.
+      canvas.addEventListener("contextmenu", e => e.preventDefault());
+      canvas.addEventListener("pointerdown", () => canvas.focus());
+      // Tab opens the skill tree: don't let the browser use it to move focus away from the game.
+      window.addEventListener("keydown", e => {
+        if (e.key === "Tab" || e.key === " " || e.key.startsWith("Arrow")) e.preventDefault();
+      }, { capture: true });
+
+      function showBanner(text, type) {
+        const m = document.getElementById("msg");
+        m.textContent = text;
+        m.style.color = type === "error" ? "#ff8aa0" : "#ffe08a";
+        if (type !== "error") setTimeout(() => { m.textContent = ""; }, 5000);
+      }
+
+      const buildUrl = "Build";
+      const config = {
+        arguments: [],
+        dataUrl: buildUrl + "/WebBuild.data.unityweb",
+        frameworkUrl: buildUrl + "/WebBuild.framework.js.unityweb",
+        codeUrl: buildUrl + "/WebBuild.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "11Kawauso",
+        productName: "結晶のアクション（試作版）",
+        productVersion: "1.0",
+        showBanner: showBanner,
+      };
+
+      const script = document.createElement("script");
+      script.src = buildUrl + "/WebBuild.loader.js";
+      script.onload = () => {
+        createUnityInstance(canvas, config, p => {
+          document.getElementById("fill").style.width = (100 * p) + "%";
+        }).then(instance => {
+          document.getElementById("loading").remove();
+          document.getElementById("fs").onclick = () => instance.SetFullscreen(1);
+          canvas.focus();
+        }).catch(message => showBanner(String(message), "error"));
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
